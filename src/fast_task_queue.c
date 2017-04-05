@@ -140,7 +140,7 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 	int aligned_max_size;
 	int aligned_arg_size;
 	rlim_t max_data_size;
-
+	//初始化g_free_queue线程锁
 	if ((result=init_pthread_lock(&(g_free_queue.lock))) != 0)
 	{
 		logError("file: "__FILE__", line: %d, " \
@@ -152,8 +152,13 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 	aligned_min_size = MEM_ALIGN(min_buff_size);
 	aligned_max_size = MEM_ALIGN(max_buff_size);
 	aligned_arg_size = MEM_ALIGN(arg_size);
+	//计算每个块分配的内存空间
 	g_free_queue.block_size = ALIGNED_TASK_INFO_SIZE + aligned_arg_size;
+	//实际要分配的内存大小 初始化连接数*每块的大小
 	alloc_size = g_free_queue.block_size * init_connections;
+	//max_buff_size也就是g_buff_size是从配置文件的buff_size项中读取的，其默认大小是64K
+	//min_buff_size是sizeof(StorageClientInfo)也就是一个客户端信息结构的大小
+	//若g_buff_size大小小于min_buff_size大小
 	if (aligned_max_size > aligned_min_size)
 	{
 		total_size = alloc_size;
@@ -172,8 +177,10 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 				__LINE__, errno, STRERROR(errno));
 			return errno != 0 ? errno : EPERM;
 		}
+		//系统没有限制内存
 		if (rlimit_data.rlim_cur == RLIM_INFINITY)
 		{
+			//原先内存使用最大数设置成512M
 			max_data_size = MAX_DATA_SIZE;
 		}
 		else
