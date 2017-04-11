@@ -129,6 +129,7 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
         const int alloc_task_once, const int min_buff_size,
         const int max_buff_size, const int arg_size)
 {
+    //宏定义 最大数据的size是256M
 #define MAX_DATA_SIZE  (256 * 1024 * 1024)
 	int64_t total_size;
 	struct mpool_node *mpool;
@@ -148,7 +149,7 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 			__LINE__, result, STRERROR(result));
 		return result;
 	}
-
+    //8的整数倍 MEM_ALIGN宏定义函数
 	aligned_min_size = MEM_ALIGN(min_buff_size);
 	aligned_max_size = MEM_ALIGN(max_buff_size);
 	aligned_arg_size = MEM_ALIGN(arg_size);
@@ -168,7 +169,9 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 	else
 	{
 		struct rlimit rlimit_data;
-
+        //一个进程的数据段最大字节长度。数据段中初始化数据、非初始化数据以及堆的总和。
+        //当调用函数brk动态改变一个进程的数据段大小时，若失败，errno值将被设置为ENOMEM。
+        //获取当前线程各种系统资源的限制使用量
 		if (getrlimit(RLIMIT_DATA, &rlimit_data) < 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
@@ -180,11 +183,12 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 		//系统没有限制内存
 		if (rlimit_data.rlim_cur == RLIM_INFINITY)
 		{
-			//原先内存使用最大数设置成512M
+			//原先内存使用最大数设置成256M
 			max_data_size = MAX_DATA_SIZE;
 		}
 		else
 		{
+		    //数据块最大值为256M
 			max_data_size = rlimit_data.rlim_cur;
 			if (max_data_size > MAX_DATA_SIZE)
 			{
@@ -207,7 +211,7 @@ int free_queue_init_ex(const int max_connections, const int init_connections,
 			max_data_size = 0;
 		}
 	}
-
+    //任务队列的最大连接数
 	g_free_queue.max_connections = max_connections;
 	g_free_queue.alloc_connections = init_connections;
     if (alloc_task_once <= 0)
